@@ -1,23 +1,30 @@
 import React from 'react';
 import Box from '@mui/material/Box';
-import { useDispatch, useSelector } from 'react-redux';
 import HighlightSettings from './HighlightSettings';
 import RefreshSettings from './RefreshSettings';
-import type { RootState } from '../store';
-import { setRefreshTime, setHighlightLimits } from '../store';
+import { useGetSettingsQuery, useUpdateSettingsMutation } from '../store';
 import { themeColors } from '../theme/colors';
 
 const SettingsPanel: React.FC = () => {
-    const dispatch = useDispatch();
-    const refreshTime = useSelector((state: RootState) => state.refreshTime.value);
-    const highlightLimits = useSelector((state: RootState) => state.highlightLimits.value);
+    const { data: settings, isLoading, isError } = useGetSettingsQuery(undefined);
+    const [updateSettings] = useUpdateSettingsMutation();
 
-    const handleRefreshTimeChange = (time: number) => {
-        dispatch(setRefreshTime(time));
+    const handleHighlightLimitsChange = async (limits: any) => {
+        if (!settings) return;
+        await updateSettings({
+            greenRed: limits.greenRed,
+            blueYellow: limits.blueYellow,
+            pollingInterval: settings.pollingInterval
+        });
     };
 
-    const handleHighlightLimitsChange = (limits: any) => {
-        dispatch(setHighlightLimits(limits));
+    const handleRefreshTimeChange = async (time: number) => {
+        if (!settings) return;
+        await updateSettings({
+            greenRed: settings.greenRed,
+            blueYellow: settings.blueYellow,
+            pollingInterval: time
+        });
     };
 
     return (
@@ -33,8 +40,16 @@ const SettingsPanel: React.FC = () => {
                 boxSizing: 'border-box',
             }}
         >
-            <HighlightSettings limits={highlightLimits} onChange={handleHighlightLimitsChange} />
-            <RefreshSettings refreshTime={refreshTime} onRefreshTimeChange={handleRefreshTimeChange} />
+            {isLoading ? (
+                <div>Loading settings...</div>
+            ) : isError ? (
+                <div style={{ color: 'red' }}>Failed to load settings from backend</div>
+            ) : settings ? (
+                <>
+                    <HighlightSettings limits={{ greenRed: settings.greenRed, blueYellow: settings.blueYellow }} onChange={handleHighlightLimitsChange} />
+                    <RefreshSettings refreshTime={settings.pollingInterval} onRefreshTimeChange={handleRefreshTimeChange} />
+                </>
+            ) : null}
         </Box>
     );
 };

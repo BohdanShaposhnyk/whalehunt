@@ -48,4 +48,9 @@ export interface Action {
   pools: string[];
   status: string;
   type: string;
+  // Backend-calculated fields
+  inputUsd?: number;
+  outputUsd?: number;
+  maxUsd?: number;
+  highlightType?: 'none' | 'blue' | 'green' | 'yellow' | 'red';
 } 

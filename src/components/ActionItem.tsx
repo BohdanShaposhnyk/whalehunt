@@ -4,26 +4,19 @@ import CircularProgress from '@mui/material/CircularProgress';
 import IconButton from '@mui/material/IconButton';
 import LaunchIcon from '@mui/icons-material/Launch';
 import { useEffect } from 'react';
-import { trimAsset, calculateUSDValues, getEffectiveOutputCoin, getSwapCalculations, getRujiDirection } from '../utils/swapUtils';
+import { trimAsset, getRujiDirection } from '../utils/swapUtils';
 import { playBeepBlue, playBeepGreen, playBeepYellow, playBeepRed } from '../utils/audioUtils';
-import { showNotification } from '../utils/notificationUtils';
-import { sendWhaleAlert } from '../utils/telegramUtils';
-import type { Coin, SwapMetadata, Action } from '../types/swap';
-import type { HighlightLimits } from '../utils/swapUtils';
+import type { Coin, Action } from '../types/swap';
 import { themeColors } from '../theme/colors';
 
 interface ActionItemProps {
     action: Action;
-    limits: HighlightLimits;
     isNew: boolean;
 }
 
-function renderSwapLine(inputCoin: Coin | undefined, outputCoin: Coin | undefined, swapMeta: SwapMetadata | undefined) {
-    if (!inputCoin || !swapMeta) return null;
-
-    const { inputUsd, outputUsd } = calculateUSDValues(inputCoin, outputCoin, swapMeta);
+function renderSwapLine(inputCoin: Coin | undefined, outputCoin: Coin | undefined, inputUsd: number, outputUsd: number) {
+    if (!inputCoin) return null;
     const inputAmount = parseInt(inputCoin.amount) / 100000000;
-
     if (!outputCoin) {
         return (
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -31,7 +24,6 @@ function renderSwapLine(inputCoin: Coin | undefined, outputCoin: Coin | undefine
             </Typography>
         );
     }
-
     const outputAmount = parseInt(outputCoin.amount) / 100000000;
     return (
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -58,49 +50,41 @@ function renderUsdCorner(outputUsd: number, rujiDirection: 'input' | 'output' | 
     );
 }
 
-const ActionItem = ({ action, limits, isNew }: ActionItemProps) => {
+// Remove highlightStyle usage, add a function to map highlightType to style
+function getHighlightStyle(type: 'none' | 'blue' | 'green' | 'yellow' | 'red' | undefined) {
+    switch (type) {
+        case 'green':
+            return { backgroundColor: '#e6f9e6', border: '2px solid #4caf50' };
+        case 'red':
+            return { backgroundColor: '#ffeaea', border: '2px solid #f44336' };
+        case 'blue':
+            return { backgroundColor: '#e3f2fd', border: '2px solid #1976d2' };
+        case 'yellow':
+            return { backgroundColor: '#fffde7', border: '2px solid #ffd600' };
+        default:
+            return { border: '1px solid #e0e0e0' };
+    }
+}
+
+const ActionItem = ({ action, isNew }: ActionItemProps) => {
     const inputCoin = action.in[0]?.coins[0];
     const outputCoin = action.out[0]?.coins[0];
-    const swapMeta = action.metadata?.swap;
     const txid = action.in[0]?.txID;
-
-    const effectiveOutputCoin = getEffectiveOutputCoin(outputCoin, action, swapMeta);
-    const { highlightStyle, highlightType, maxUsd } = getSwapCalculations(inputCoin, effectiveOutputCoin, swapMeta, limits);
+    const maxUsd = action.maxUsd ?? 0;
+    const inputUsd = action.inputUsd ?? 0;
+    const outputUsd = action.outputUsd ?? 0;
     const rujiDirection = getRujiDirection(inputCoin, outputCoin);
-
+    // highlightType and highlightStyle logic can be kept if it depends on more than just USD values, otherwise refactor as needed
     useEffect(() => {
-        if (highlightType && isNew) {
+        if (action.highlightType && isNew) {
             // Play sound for highlight type
-            if (highlightType === 'blue') playBeepBlue();
-            if (highlightType === 'green') playBeepGreen();
-            if (highlightType === 'yellow') playBeepYellow();
-            if (highlightType === 'red') playBeepRed();
-
-            // Show notification for whales (green/red)
-            if (highlightType === 'green' || highlightType === 'red') {
-                const inputAmount = inputCoin ? parseInt(inputCoin.amount) / 100000000 : 0;
-                const outputAmount = effectiveOutputCoin ? parseInt(effectiveOutputCoin.amount) / 100000000 : 0;
-
-                // Send desktop notification
-                showNotification({
-                    title: `🐋 ${highlightType === 'green' ? 'Whale' : 'RUJI Whale'} Detected!`,
-                    body: `${inputAmount} ${trimAsset(inputCoin?.asset || '')} → ${outputAmount} ${trimAsset(effectiveOutputCoin?.asset || '')} ($${maxUsd.toLocaleString()})`,
-                    silent: false
-                });
-
-                // Send Telegram notification
-                sendWhaleAlert(
-                    highlightType,
-                    inputAmount,
-                    trimAsset(inputCoin?.asset || ''),
-                    outputAmount,
-                    trimAsset(effectiveOutputCoin?.asset || ''),
-                    maxUsd
-                );
-            }
+            if (action.highlightType === 'blue') playBeepBlue();
+            if (action.highlightType === 'green') playBeepGreen();
+            if (action.highlightType === 'yellow') playBeepYellow();
+            if (action.highlightType === 'red') playBeepRed();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [highlightType, isNew]);
+    }, [action.highlightType, isNew]);
 
     return (
         <Box
@@ -115,7 +99,7 @@ const ActionItem = ({ action, limits, isNew }: ActionItemProps) => {
                 borderRadius: 1,
                 position: 'relative',
                 opacity: maxUsd < 100 ? 0.6 : 1,
-                ...highlightStyle
+                ...getHighlightStyle(action.highlightType)
             }}
         >
             {action.status === 'pending' && (
@@ -140,7 +124,7 @@ const ActionItem = ({ action, limits, isNew }: ActionItemProps) => {
                     </IconButton>
                 </Box>
             )}
-            {renderUsdCorner(maxUsd, rujiDirection)}
+            {renderUsdCorner(outputUsd, rujiDirection)}
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
                 {(() => {
                     const ns = Number(action.date);
@@ -148,7 +132,7 @@ const ActionItem = ({ action, limits, isNew }: ActionItemProps) => {
                     return new Date(ms).toLocaleString();
                 })()}
             </Typography>
-            {renderSwapLine(inputCoin, effectiveOutputCoin, swapMeta)}
+            {renderSwapLine(inputCoin, outputCoin, inputUsd, outputUsd)}
             <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
                 <span style={{ color: '#666', marginRight: 4 }}>Address:</span>
                 <a

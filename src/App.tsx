@@ -5,60 +5,45 @@ import SettingsPanel from './components/SettingsPanel';
 import AudioTestPanel from './components/AudioTestPanel';
 import TelegramSettings from './components/TelegramSettings';
 import BackgroundWrapper from './components/BackgroundWrapper';
-import { useSelector } from 'react-redux';
-import type { RootState } from './store';
 
 function App() {
-  const highlightLimits = useSelector((state: RootState) => state.highlightLimits.value);
-
   return (
     <>
       <BackgroundWrapper />
       <Box
         display="flex"
-        alignItems="flex-start"
-        justifyContent="stretch"
+        flexDirection="row"
         minHeight="100vh"
-        minWidth="100%"
+        minWidth="100vw"
         width="100vw"
         boxSizing="border-box"
+        gap={2}
       >
-        <ActionsList
-          highlightLimits={highlightLimits}
-        />
+        {/* Left: ActionsList (50%) */}
+        <Box flex={1} minWidth={0}>
+          <ActionsList />
+        </Box>
+        {/* Right: Telegram + Settings/Audio */}
         <Box
+          flex={1}
           display="flex"
-          flexDirection="column"
-          width="50%"
-          flexShrink={0}
-          padding={2}
-          boxSizing="border-box"
+          flexDirection="row"
+          minWidth={0}
+          justifyContent="flex-start"
+          pt={2}
+          pb={2}
+          pr={2}
+          gap={2}
         >
-          <Box
-            display="flex"
-            flexDirection="row"
-            gap={2}
-            marginBottom={2}
-          >
+          {/* TelegramSettings (left half of right panel) */}
+          <Box flex={1} minWidth={0} display="flex" alignItems="stretch" height="fit-content">
+            <TelegramSettings />
+          </Box>
+          {/* SettingsPanel + AudioTestPanel (right half of right panel, stacked) */}
+          <Box flex={1} minWidth={0} display="flex" flexDirection="column" gap={2} height="fit-content">
             <SettingsPanel />
             <AudioTestPanel />
           </Box>
-          <Box
-            display="flex"
-            flexDirection="row"
-            gap={2}
-            width="100%"
-          >
-            <TelegramSettings />
-            <Box
-              sx={{
-                flex: 1,
-                width: '100%',
-                p: 1.5,
-              }}
-            ></Box>
-          </Box>
-
         </Box>
       </Box>
     </>

@@ -2,33 +2,19 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
-import { useGetActionsQuery } from '../store';
-import { useSelector } from 'react-redux';
-import type { RootState } from '../store';
+import { useGetActionsQuery, useGetSettingsQuery } from '../store';
 import ActionItem from './ActionItem';
 import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { HighlightLimits } from '../utils/swapUtils';
 import { themeColors } from '../theme/colors';
 import { unlockAudioContext } from '../utils/audioUtils';
 
-interface ActionsListProps {
-    highlightLimits: HighlightLimits;
-}
-
-function ActionsList({ highlightLimits }: ActionsListProps) {
-    const refreshTime = useSelector((state: RootState) => state.refreshTime.value);
-    const { data, isLoading, error } = useGetActionsQuery(
-        { limit: 8, asset: 'THOR.RUJI', type: 'swap' },
-        {
-            pollingInterval: refreshTime * 1000, // Convert seconds to milliseconds
-        }
-    );
-
-    // Data is now always an array from transformResponse
+function ActionsList() {
+    const { data: settings } = useGetSettingsQuery(undefined);
+    const pollingInterval = settings?.pollingInterval ? settings.pollingInterval * 1000 : 30000;
+    const { data, isLoading, error } = useGetActionsQuery(undefined, { pollingInterval });
     const actions = data || [];
 
-    // Unlock audio context on first user gesture
     useEffect(() => {
         const handleUserGesture = () => {
             unlockAudioContext();
@@ -58,7 +44,6 @@ function ActionsList({ highlightLimits }: ActionsListProps) {
                     Failed to fetch actions
                 </Alert>
             </Box>
-
         );
     }
 
@@ -67,7 +52,6 @@ function ActionsList({ highlightLimits }: ActionsListProps) {
             display="flex"
             p={2}
             flexDirection="column"
-            minWidth="50vw"
             alignItems="center"
             justifyContent="stretch"
             height="100vh"
@@ -85,32 +69,20 @@ function ActionsList({ highlightLimits }: ActionsListProps) {
             ) : (
                 <Box width="100%">
                     <AnimatePresence initial={false}>
-                        {actions.map((action: any, index: number) => {
-                            const isNew = action._isNew;
-                            return isNew ? (
-                                <motion.div
-                                    key={action._txid || index}
-                                    initial={{ opacity: 0, y: 30 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -30 }}
-                                    transition={{ duration: 0.5 }}
-                                >
-                                    <ActionItem
-                                        action={action}
-                                        limits={highlightLimits}
-                                        isNew={isNew}
-                                    />
-                                </motion.div>
-                            ) : (
-                                <div key={action._txid || index}>
-                                    <ActionItem
-                                        action={action}
-                                        limits={highlightLimits}
-                                        isNew={isNew}
-                                    />
-                                </div>
-                            );
-                        })}
+                        {actions.map((action: any, index: number) => (
+                            <motion.div
+                                key={action._txid || index}
+                                initial={{ opacity: 0, y: 30 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -30 }}
+                                transition={{ duration: 0.5 }}
+                            >
+                                <ActionItem
+                                    action={action}
+                                    isNew={action._isNew}
+                                />
+                            </motion.div>
+                        ))}
                     </AnimatePresence>
                 </Box>
             )}

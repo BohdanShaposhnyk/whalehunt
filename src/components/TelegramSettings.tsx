@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
@@ -6,47 +6,36 @@ import Switch from '@mui/material/Switch';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Button from '@mui/material/Button';
 import Alert from '@mui/material/Alert';
-import { getTelegramConfig, setTelegramConfig, testTelegramConnection } from '../utils/telegramUtils';
+import { useGetTelegramConfigQuery, useUpdateTelegramConfigMutation, useTestTelegramQuery } from '../store';
 import { themeColors } from '../theme/colors';
 
 const TelegramSettings: React.FC = () => {
+    const { data: config, isLoading, isError } = useGetTelegramConfigQuery(undefined);
+    const [updateConfig] = useUpdateTelegramConfigMutation();
+    const [testRequested, setTestRequested] = useState(false);
+    const { data: testResult, isFetching: isTesting } = useTestTelegramQuery(undefined, { skip: !testRequested });
     const [botToken, setBotToken] = useState('');
     const [chatId, setChatId] = useState('');
     const [enabled, setEnabled] = useState(false);
-    const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
-    const [isTesting, setIsTesting] = useState(false);
+    const [saveResult, setSaveResult] = useState<string | null>(null);
 
-    useEffect(() => {
-        // Load current config
-        const config = getTelegramConfig();
-        setBotToken(config.botToken);
-        setChatId(config.chatId);
-        setEnabled(config.enabled);
-    }, []);
+    React.useEffect(() => {
+        if (config) {
+            setBotToken(config.botToken);
+            setChatId(config.chatId);
+            setEnabled(config.enabled);
+        }
+    }, [config]);
 
-    const handleSave = () => {
-        setTelegramConfig({
-            botToken,
-            chatId,
-            enabled
-        });
-        setTestResult({ success: true, message: 'Settings saved successfully!' });
+    const handleSave = async () => {
+        await updateConfig({ botToken, chatId, enabled });
+        setSaveResult('Settings saved successfully!');
     };
 
     const handleTest = async () => {
-        setIsTesting(true);
-        setTestResult(null);
-
-        // Save current config first
-        setTelegramConfig({
-            botToken,
-            chatId,
-            enabled: true // Enable for testing
-        });
-
-        const result = await testTelegramConnection();
-        setTestResult(result);
-        setIsTesting(false);
+        await updateConfig({ botToken, chatId, enabled: true });
+        setTestRequested(false); // reset to allow retrigger
+        setTimeout(() => setTestRequested(true), 0);
     };
 
     return (
@@ -67,63 +56,71 @@ const TelegramSettings: React.FC = () => {
                 Telegram Notifications
             </Typography>
 
-            <FormControlLabel
-                control={
-                    <Switch
-                        checked={enabled}
-                        onChange={(e) => setEnabled(e.target.checked)}
-                        color="primary"
+            {isLoading ? (
+                <Typography variant="body2">Loading...</Typography>
+            ) : isError ? (
+                <Typography variant="body2" color="error">Failed to load Telegram config from backend.</Typography>
+            ) : (
+                <>
+                    <FormControlLabel
+                        control={
+                            <Switch
+                                checked={enabled}
+                                onChange={(e) => setEnabled(e.target.checked)}
+                                color="primary"
+                            />
+                        }
+                        label="Enable Telegram notifications"
+                        sx={{ color: themeColors.textPrimary }}
                     />
-                }
-                label="Enable Telegram notifications"
-                sx={{ color: themeColors.textPrimary }}
-            />
 
-            <TextField
-                label="Bot Token"
-                value={botToken}
-                onChange={(e) => setBotToken(e.target.value)}
-                size="small"
-                type="password"
-                placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
-                helperText="Get this from @BotFather on Telegram"
-                disabled={!enabled}
-            />
+                    <TextField
+                        label="Bot Token"
+                        value={botToken}
+                        onChange={(e) => setBotToken(e.target.value)}
+                        size="small"
+                        type="password"
+                        placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
+                        helperText="Get this from @BotFather on Telegram"
+                        disabled={!enabled}
+                    />
 
-            <TextField
-                label="Chat ID"
-                value={chatId}
-                onChange={(e) => setChatId(e.target.value)}
-                size="small"
-                placeholder="123456789"
-                helperText="Your personal chat ID or group chat ID"
-                disabled={!enabled}
-            />
+                    <TextField
+                        label="Chat ID"
+                        value={chatId}
+                        onChange={(e) => setChatId(e.target.value)}
+                        size="small"
+                        placeholder="123456789"
+                        helperText="Your personal chat ID or group chat ID"
+                        disabled={!enabled}
+                    />
 
-            <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button
-                    variant="outlined"
-                    onClick={handleSave}
-                    disabled={!enabled || !botToken || !chatId}
-                    size="small"
-                >
-                    Save Settings
-                </Button>
-                <Button
-                    variant="outlined"
-                    onClick={handleTest}
-                    disabled={!enabled || !botToken || !chatId || isTesting}
-                    size="small"
-                >
-                    {isTesting ? 'Testing...' : 'Test Connection'}
-                </Button>
-            </Box>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                            variant="outlined"
+                            onClick={handleSave}
+                            disabled={!enabled || !botToken || !chatId}
+                            size="small"
+                        >
+                            Save Settings
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            onClick={handleTest}
+                            disabled={!enabled || !botToken || !chatId || isTesting}
+                            size="small"
+                        >
+                            {isTesting ? 'Testing...' : 'Test Connection'}
+                        </Button>
+                    </Box>
+                </>
+            )}
 
+            {saveResult && (
+                <Alert severity="success" sx={{ mt: 1 }}>{saveResult}</Alert>
+            )}
             {testResult && (
-                <Alert
-                    severity={testResult.success ? 'success' : 'error'}
-                    sx={{ mt: 1 }}
-                >
+                <Alert severity={testResult.success ? 'success' : 'error'} sx={{ mt: 1 }}>
                     {testResult.message}
                 </Alert>
             )}
