@@ -62,4 +62,25 @@ router.post('/whale-alert', (req, res) => {
     });
 });
 
+// Add test whale endpoint
+router.post('/test-whale', (req, res) => {
+    getTelegramConfig(async (config) => {
+        if (!config.enabled || !config.botToken || !config.chatId) {
+            return res.status(400).json({ error: 'Telegram notifications not enabled/configured' });
+        }
+        const message = `🐋 <b>Test Whale Detected!</b>\n\n💰 <b>Swap Details:</b>\n1000 THOR.RUJI → 10 BTC.BTC\n💵 <b>Value:</b> $1,000,000\n\n⏰ <b>Time:</b> ${new Date().toLocaleString()}`;
+        try {
+            await axios.post(`https://api.telegram.org/bot${config.botToken}/sendMessage`, {
+                chat_id: config.chatId,
+                text: message,
+                parse_mode: 'HTML',
+                disable_web_page_preview: true
+            });
+            res.json({ success: true });
+        } catch (error) {
+            res.status(500).json({ error: 'Failed to send Telegram message' });
+        }
+    });
+});
+
 module.exports = router; 
