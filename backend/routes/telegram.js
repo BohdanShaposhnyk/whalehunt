@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const { getTelegramConfig, setTelegramConfig, createBot } = require('../services/telegramService');
+const trimAsset = require('../utils/trimAsset');
 
 // GET /api/telegram/config
 router.get('/config', (req, res) => {
@@ -44,7 +45,9 @@ router.post('/whale-alert', (req, res) => {
         if (!config.enabled || !config.botToken || !config.chatId) {
             return res.status(400).json({ error: 'Telegram notifications not enabled/configured' });
         }
-        const { highlightType, inputAmount, inputAsset, outputAmount, outputAsset, maxUsd } = req.body;
+        let { highlightType, inputAmount, inputAsset, outputAmount, outputAsset, maxUsd } = req.body;
+        inputAsset = trimAsset(inputAsset);
+        outputAsset = trimAsset(outputAsset);
         const emoji = highlightType === 'green' ? '🐋' : '🦈';
         const whaleType = highlightType === 'green' ? 'Whale' : 'RUJI Whale';
         const message = `\n${emoji} <b>${whaleType} Detected!</b>\n\n💰 <b>Swap Details:</b>\n${inputAmount} ${inputAsset} → ${outputAmount} ${outputAsset}\n💵 <b>Value:</b> $${maxUsd.toLocaleString()}\n\n⏰ <b>Time:</b> ${new Date().toLocaleString()}`;
@@ -68,7 +71,7 @@ router.post('/test-whale', (req, res) => {
         if (!config.enabled || !config.botToken || !config.chatId) {
             return res.status(400).json({ error: 'Telegram notifications not enabled/configured' });
         }
-        const message = `🐋 <b>Test Whale Detected!</b>\n\n💰 <b>Swap Details:</b>\n1000 THOR.RUJI → 10 BTC.BTC\n💵 <b>Value:</b> $1,000,000\n\n⏰ <b>Time:</b> ${new Date().toLocaleString()}`;
+        const message = `🐋 <b>Test Whale Detected!</b>\n\n💰 <b>Swap Details:</b>\n1000 ${trimAsset('THOR.RUJI')} → 10 ${trimAsset('BTC.BTC')}\n💵 <b>Value:</b> $1,000,000\n\n⏰ <b>Time:</b> ${new Date().toLocaleString()}`;
         try {
             await axios.post(`https://api.telegram.org/bot${config.botToken}/sendMessage`, {
                 chat_id: config.chatId,

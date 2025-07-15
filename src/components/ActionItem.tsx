@@ -4,7 +4,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import IconButton from '@mui/material/IconButton';
 import LaunchIcon from '@mui/icons-material/Launch';
 import { useEffect } from 'react';
-import { trimAsset, getRujiDirection } from '../utils/swapUtils';
+import { getRujiDirection } from '../utils/swapUtils';
 import { playBeepBlue, playBeepGreen, playBeepYellow, playBeepRed } from '../utils/audioUtils';
 import type { Coin, Action } from '../types/swap';
 import { themeColors } from '../theme/colors';
@@ -20,16 +20,16 @@ function renderSwapLine(inputCoin: Coin | undefined, outputCoin: Coin | undefine
     if (!outputCoin) {
         return (
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                {inputAmount} <strong>{trimAsset(inputCoin.asset)}</strong> (${inputUsd.toFixed(2)}) → ...
+                {inputAmount} <strong>{inputCoin.asset}</strong> (${inputUsd.toFixed(2)}) → ...
             </Typography>
         );
     }
     const outputAmount = parseInt(outputCoin.amount) / 100000000;
     return (
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            {inputAmount} <strong>{trimAsset(inputCoin.asset)}</strong> (${inputUsd.toFixed(2)})
+            {inputAmount} <strong>{inputCoin.asset}</strong> (${inputUsd.toFixed(2)})
             {' '}→{' '}
-            {outputAmount} <strong>{trimAsset(outputCoin.asset)}</strong> (${outputUsd.toFixed(2)})
+            {outputAmount} <strong>{outputCoin.asset}</strong> (${outputUsd.toFixed(2)})
         </Typography>
     );
 }

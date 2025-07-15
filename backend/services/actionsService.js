@@ -1,5 +1,6 @@
 const { calculateUSDValues, DEFAULT_HIGHLIGHT_LIMITS, getEffectiveOutputCoin, getHighlightType } = require('../utils/usdUtils');
 const { getSettings } = require('./settingsService');
+const trimAsset = require('../utils/trimAsset');
 
 const MAX_SWAPS = 50;
 let swapBuffer = [];
@@ -72,7 +73,29 @@ function storeActions(actions, db) {
 function getActions(db, cb) {
     db.all('SELECT * FROM actions ORDER BY rowid DESC LIMIT 50', (err, rows) => {
         if (err) return cb(err);
-        const actions = rows.map(row => JSON.parse(row.data));
+        const actions = rows.map(row => {
+            const action = JSON.parse(row.data);
+            // Trim asset strings for all coins in 'in' and 'out'
+            if (action.in) {
+                action.in.forEach(input => {
+                    if (input.coins) {
+                        input.coins.forEach(coin => {
+                            coin.asset = trimAsset(coin.asset);
+                        });
+                    }
+                });
+            }
+            if (action.out) {
+                action.out.forEach(output => {
+                    if (output.coins) {
+                        output.coins.forEach(coin => {
+                            coin.asset = trimAsset(coin.asset);
+                        });
+                    }
+                });
+            }
+            return action;
+        });
         cb(null, actions);
     });
 }
