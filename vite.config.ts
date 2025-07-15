@@ -9,5 +9,8 @@ export default defineConfig({
       '/api': 'http://localhost:3001'
     }
   },
+  preview: {
+    allowedHosts: ['whalehunt-fe-production.up.railway.app']
+  },
   base: './', // Use relative paths for Electron compatibility
 });
