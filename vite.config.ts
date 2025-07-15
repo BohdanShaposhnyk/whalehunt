@@ -12,5 +12,5 @@ export default defineConfig({
   preview: {
     allowedHosts: ['whalehunt-fe-production.up.railway.app']
   },
-  base: './', // Use relative paths for Electron compatibility
+  // base: './', // Use relative paths for Electron compatibility
 });
