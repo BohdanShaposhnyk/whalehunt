@@ -5,7 +5,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 const API_BASE_URL =
   import.meta.env.DEV
     ? 'http://localhost:3001/api/'
-    : (import.meta.env.VITE_API_URL || 'https://whalehunt.railway.internal/api/');
+    : (import.meta.env.VITE_API_URL || 'https://whalehunt-production.up.railway.app/api/');
 
 // RTK Query API slice
 export const apiSlice = createApi({
