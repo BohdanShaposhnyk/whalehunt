@@ -2,18 +2,20 @@ function calculateUSDValues(inputCoin, outputCoin, swapMeta) {
     const inputUsd = inputCoin && swapMeta && swapMeta.inPriceUSD
         ? (parseInt(inputCoin.amount) / 100000000 * parseFloat(swapMeta.inPriceUSD))
         : 0;
-    const outputUsd = outputCoin && swapMeta && swapMeta.outPriceUSD
-        ? (parseInt(outputCoin.amount) / 100000000 * parseFloat(swapMeta.outPriceUSD))
+    // For pending, use priceUsd if present on outputCoin
+    const outputUsd = outputCoin && swapMeta && (outputCoin.priceUsd || swapMeta.outPriceUSD)
+        ? (parseInt(outputCoin.amount) / 100000000 * parseFloat(outputCoin.priceUsd || swapMeta.outPriceUSD))
         : 0;
     return { inputUsd, outputUsd };
 }
 
 function getEffectiveOutputCoin(outputCoin, action, swapMeta) {
-    // Create virtual output coin for pending swaps
-    if (action.status === 'pending' && swapMeta && swapMeta.streamingSwapMeta && swapMeta.streamingSwapMeta.outEstimation) {
+    // For pending swaps, synthesize output coin using pools[1], outEstimation, and outPriceUSD
+    if (action.status === 'pending' && swapMeta && swapMeta.streamingSwapMeta && swapMeta.streamingSwapMeta.outEstimation && Array.isArray(action.pools) && action.pools.length > 1) {
         return {
             amount: swapMeta.streamingSwapMeta.outEstimation,
-            asset: 'THOR.RUJI' // Assuming this is the target asset for pending swaps
+            asset: action.pools[1],
+            priceUsd: swapMeta.outPriceUSD
         };
     }
     return outputCoin;
@@ -38,7 +40,17 @@ function getHighlightType(inputUsd, outputUsd, inputAsset, limits = DEFAULT_HIGH
 
 // Selects the output coin based on pools if there are multiple output coins
 function selectOutputCoin(action) {
-    if (!action.out || !Array.isArray(action.out) || action.out.length === 0) return undefined;
+    if (!action.out || !Array.isArray(action.out) || action.out.length === 0) {
+        // For pending, synthesize output coin
+        if (action.status === 'pending' && action.metadata && action.metadata.swap && action.metadata.swap.streamingSwapMeta && Array.isArray(action.pools) && action.pools.length > 1) {
+            return {
+                amount: action.metadata.swap.streamingSwapMeta.outEstimation,
+                asset: action.pools[1],
+                priceUsd: action.metadata.swap.outPriceUSD
+            };
+        }
+        return undefined;
+    }
     // If only one output, return its first coin
     if (action.out.length === 1) return action.out[0].coins[0];
     // If multiple outputs, use pools[1] as the target asset
