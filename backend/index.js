@@ -5,7 +5,7 @@ const actionsRoutes = require('./routes/actions')(db);
 const settingsRoutes = require('./routes/settings');
 const telegramRoutes = require('./routes/telegram');
 const { initSettingsTable } = require('./services/settingsService');
-const { initTelegramConfigTable } = require('./services/telegramService');
+const { initTelegramConfigTable, getTelegramConfig, startBotWithCommands } = require('./services/telegramService');
 const { startScheduler } = require('./services/schedulerService');
 
 const app = express();
@@ -29,6 +29,16 @@ db.serialize(() => {
 // === INIT SETTINGS & TELEGRAM TABLES ===
 initSettingsTable();
 initTelegramConfigTable();
+
+// === START TELEGRAM BOT (if enabled/configured) ===
+getTelegramConfig((config) => {
+    if (config.enabled && config.botToken) {
+        startBotWithCommands(config.botToken);
+        console.log('Telegram bot started in polling mode.');
+    } else {
+        console.log('Telegram bot not started (not enabled or missing token).');
+    }
+});
 
 // === START SCHEDULER ===
 startScheduler(db);

@@ -1,5 +1,6 @@
 const db = require('../db');
 const TelegramBot = require('node-telegram-bot-api');
+const { setSettings, getSettings } = require('./settingsService');
 
 // Ensure telegram_config table exists
 function initTelegramConfigTable() {
@@ -41,4 +42,53 @@ function createBot(token) {
     return new TelegramBot(token, { polling: false });
 }
 
-module.exports = { initTelegramConfigTable, getTelegramConfig, setTelegramConfig, createBot }; 
+function startBotWithCommands(token) {
+    const bot = new TelegramBot(token, { polling: true });
+
+    bot.onText(/\/set_whale (\d+)/, (msg, match) => {
+        const value = parseInt(match[1]);
+        getSettings((settings) => {
+            setSettings({ ...settings, greenRed: value }, () => {
+                bot.sendMessage(msg.chat.id, `Whale limit set to $${value}`);
+            });
+        });
+    });
+
+    bot.onText(/\/set_dolphin (\d+)/, (msg, match) => {
+        const value = parseInt(match[1]);
+        getSettings((settings) => {
+            setSettings({ ...settings, blueYellow: value }, () => {
+                bot.sendMessage(msg.chat.id, `Dolphin limit set to $${value}`);
+            });
+        });
+    });
+
+    bot.onText(/\/set_refresh (\d+)/, (msg, match) => {
+        const value = parseInt(match[1]);
+        getSettings((settings) => {
+            setSettings({ ...settings, pollingInterval: value }, () => {
+                bot.sendMessage(msg.chat.id, `Refresh time set to ${value} seconds`);
+            });
+        });
+    });
+
+    bot.onText(/\/get_settings/, (msg) => {
+        getSettings((settings) => {
+            bot.sendMessage(
+                msg.chat.id,
+                `Current settings:\nWhale: $${settings.greenRed}\nDolphin: $${settings.blueYellow}\nRefresh: ${settings.pollingInterval} sec`
+            );
+        });
+    });
+
+    bot.onText(/\/help/, (msg) => {
+        bot.sendMessage(
+            msg.chat.id,
+            `Available commands:\n/set_whale <amount> - Set whale limit\n/set_dolphin <amount> - Set dolphin limit\n/set_refresh <seconds> - Set refresh time\n/get_settings - Show current settings`
+        );
+    });
+
+    return bot;
+}
+
+module.exports = { initTelegramConfigTable, getTelegramConfig, setTelegramConfig, createBot, startBotWithCommands }; 
