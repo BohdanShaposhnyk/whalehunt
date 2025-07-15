@@ -6,7 +6,7 @@ import Switch from '@mui/material/Switch';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Button from '@mui/material/Button';
 import Alert from '@mui/material/Alert';
-import { useGetTelegramConfigQuery, useUpdateTelegramConfigMutation, useTestTelegramQuery } from '../store';
+import { useGetTelegramConfigQuery, useUpdateTelegramConfigMutation, useTestTelegramQuery, useSendTestWhaleMutation } from '../store';
 import { themeColors } from '../theme/colors';
 
 const TelegramSettings: React.FC = () => {
@@ -18,6 +18,7 @@ const TelegramSettings: React.FC = () => {
     const [chatId, setChatId] = useState('');
     const [enabled, setEnabled] = useState(false);
     const [saveResult, setSaveResult] = useState<string | null>(null);
+    const [sendTestWhale, { isLoading: isSendingWhale }] = useSendTestWhaleMutation();
 
     React.useEffect(() => {
         if (config) {
@@ -95,7 +96,7 @@ const TelegramSettings: React.FC = () => {
                         disabled={!enabled}
                     />
 
-                    <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Box display="flex" gap={1} flexDirection="column">
                         <Button
                             variant="outlined"
                             onClick={handleSave}
@@ -112,7 +113,16 @@ const TelegramSettings: React.FC = () => {
                         >
                             {isTesting ? 'Testing...' : 'Test Connection'}
                         </Button>
+                        <Button
+                            variant="outlined"
+                            onClick={() => sendTestWhale()}
+                            disabled={isSendingWhale}
+                            size="small"
+                        >
+                            {isSendingWhale ? 'Sending...' : 'Send Test Whale Notification'}
+                        </Button>
                     </Box>
+
                 </>
             )}
 
