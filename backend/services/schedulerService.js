@@ -3,6 +3,7 @@ const { storeActions } = require('./actionsService');
 const { getSettings } = require('./settingsService');
 const { getTelegramConfig } = require('./telegramService');
 const { getEffectiveOutputCoin, selectOutputCoin } = require('../utils/usdUtils');
+const trimAsset = require('../utils/trimAsset');
 
 const VANAHEIMEX_API = 'https://vanaheimex.com/actions?limit=10&asset=THOR.RUJI&type=swap';
 
@@ -38,9 +39,10 @@ function startScheduler(db) {
                             const swapMeta = action.metadata?.swap;
                             const effectiveOutputCoin = getEffectiveOutputCoin(outputCoin, action, swapMeta);
                             const outputAmount = effectiveOutputCoin ? parseInt(effectiveOutputCoin.amount) / 1e8 : 0;
-                            const outputAsset = effectiveOutputCoin ? effectiveOutputCoin.asset : (outputCoin ? outputCoin.asset : '');
+                            const outputAsset = effectiveOutputCoin ? trimAsset(effectiveOutputCoin.asset) : (outputCoin ? trimAsset(outputCoin.asset) : '');
+                            const inputAsset = action.in[0]?.coins[0]?.asset ? trimAsset(action.in[0]?.coins[0]?.asset) : '';
                             if (inputAmount > settings.greenRed) { // Whale threshold from settings
-                                const msg = `🐋 Whale Detected!\n${inputAmount} ${action.in[0]?.coins[0]?.asset} -> ${outputAmount} ${outputAsset}`;
+                                const msg = `🐋 Whale Detected!\n${inputAmount} ${inputAsset} -> ${outputAmount} ${outputAsset}`;
                                 try {
                                     await axios.post(`https://api.telegram.org/bot${config.botToken}/sendMessage`, {
                                         chat_id: config.chatId,
